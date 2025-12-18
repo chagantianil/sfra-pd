@@ -33,7 +33,7 @@ server.get('GetContent', server.middleware.include, function (req, res, next) {
     // Get PWA Kit URL from Site Preferences
     var pwaKitBaseURL = Site.getCurrent().getCustomPreferenceValue('pwaKitURL');
     
-    if (!pwaKitBaseURL || empty(pwaKitBaseURL)) {
+    if (!pwaKitBaseURL || pwaKitBaseURL === null || pwaKitBaseURL === '') {
         res.setStatusCode(500);
         res.json({ 
             error: 'PWA Kit URL not configured. Please set the "PWA Kit URL" preference in Business Manager > Site Preferences > Custom Preferences > PWA Kit.' 

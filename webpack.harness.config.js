@@ -1,9 +1,11 @@
+'use strict';
+
 /**
  * This separate config is required as webpack-dev-middleware in PWA does not seem to support emitting files
  */
-const config = require('@salesforce/pwa-kit-dev/configs/webpack/config')
-const path = require('path')
-const webpack = require('webpack')
+var config = require('@salesforce/pwa-kit-dev/configs/webpack/config');
+var path = require('path');
+var webpack = require('webpack');
 
 // Add your customizations here
 const clientConfig = config.find((cnf) => cnf.name === 'client')

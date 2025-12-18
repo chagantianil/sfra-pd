@@ -1,17 +1,19 @@
-var RESTResponseMgr = require("dw/system/RESTResponseMgr");
-var CustomObjectMgr = require("dw/object/CustomObjectMgr");
-var Transaction = require("dw/system/Transaction");
-var Logger = require("dw/system/Logger");
+'use strict';
+
+var RESTResponseMgr = require('dw/system/RESTResponseMgr');
+var CustomObjectMgr = require('dw/object/CustomObjectMgr');
+var Transaction = require('dw/system/Transaction');
+var Logger = require('dw/system/Logger');
 
 exports.setNewsletterInfo = function () {
     // 1. Parse Parameters
-    const params = request.httpParameters;
-    const email = params.c_email ? params.c_email[0] : null;
-    const firstName = params.c_firstName ? params.c_firstName[0] : null;
-    const lastName = params.c_lastName ? params.c_lastName[0] : null;
-    const phone = params.c_phone ? params.c_phone[0] : null;
+    var params = request.httpParameters;
+    var email = params.c_email ? params.c_email[0] : null;
+    var firstName = params.c_firstName ? params.c_firstName[0] : null;
+    var lastName = params.c_lastName ? params.c_lastName[0] : null;
+    var phone = params.c_phone ? params.c_phone[0] : null;
     // Assuming consent is passed as a string "true" or "false"
-    const consent = params.c_consent ? params.c_consent[0] : null;
+    var consent = params.c_consent ? params.c_consent[0] : null;
 
     // 2. Validation: Email is the Primary Key, so it is mandatory
     if (!email) {
