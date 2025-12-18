@@ -226,20 +226,40 @@ This file defines the HTTP service used to call PWA Kit. **You must import this 
 ### Step 1: Configure SFCC
 
 #### 1.1 Upload Cartridge
-Upload `app_pagedesigner_pwa` cartridge and add to cartridge path:
-```
-app_pagedesigner_pwa:app_storefront_base:...
-```
 
-#### 1.2 Import Service Metadata
+Upload the `app_pagedesigner_pwa` cartridge to your SFCC instance:
+
+**Using VS Code with Prophet Debugger:**
+1. Configure `dw.json` with your sandbox credentials
+2. Right-click on `app_pagedesigner_pwa/cartridges/app_pagedesigner_pwa` → **Upload Cartridge**
+
+**Using WebDAV:**
+1. Connect to `https://{your-sandbox}/on/demandware.servlet/webdav/Sites/Cartridges/{code-version}/`
+2. Upload the `app_pagedesigner_pwa` folder
+
+#### 1.2 Add Cartridge to Cartridge Path
+
+1. Go to **Business Manager** → **Administration** → **Sites** → **Manage Sites**
+2. Select your site (e.g., `RefArch`)
+3. Click the **Settings** tab
+4. Find **Cartridges** field and add `app_pagedesigner_pwa` at the beginning:
+   ```
+   app_pagedesigner_pwa:app_storefront_base:modules:...
+   ```
+5. Click **Apply**
+
+> ⚠️ **Important:** The cartridge must be BEFORE `app_storefront_base` in the path to override templates properly.
+
+#### 1.3 Import Service Metadata
 
 Import the service definition for the PWA Kit HTTP service:
 
 1. Go to **Business Manager** → **Administration** → **Operations** → **Import & Export**
 2. Click **Upload** under "Import & Export Files"
 3. Upload: `app_pagedesigner_pwa/meta/services.xml`
-4. Click **Import** under "Services"
-5. Select the uploaded file and click **Next** → **Import**
+4. Go back to **Import & Export**
+5. Click **Import** under "Services"
+6. Select the uploaded file and click **Next** → **Import**
 
 **What gets created:**
 | Item | Location |
@@ -248,7 +268,7 @@ Import the service definition for the PWA Kit HTTP service:
 | `pwakit.http.credential` | Administration → Operations → Services → Credentials |
 | `pwakit.http.profile` | Administration → Operations → Services → Profiles |
 
-#### 1.3 Configure Service Credential (Set PWA Kit URL)
+#### 1.4 Configure Service Credential (Set PWA Kit URL)
 
 After importing, update the service credential with your PWA Kit URL:
 
