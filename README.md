@@ -22,8 +22,12 @@ Before you begin, ensure you have:
 | Requirement | Description |
 |-------------|-------------|
 | **SFCC Sandbox** | Access to Business Manager with admin rights |
-| **PWA Kit Project** | A PWA Kit project deployed to Managed Runtime |
+| **PWA Kit on Managed Runtime** | PWA Kit deployed to Managed Runtime (**localhost will NOT work!**) |
 | **Cartridge Upload Tool** | VS Code + Prophet Debugger OR WebDAV client |
+
+> 🚨 **IMPORTANT:** This solution requires your PWA Kit to be deployed to **Managed Runtime**. 
+> `http://localhost:3000` does NOT work because SFCC servers cannot reach your local machine.
+> See [Important Limitations](#️-important-limitations) for details.
 
 ---
 
@@ -454,14 +458,66 @@ https://your-project.mobify-storefront.com/{siteID}/page/{pageID}?preview=true
 
 ---
 
-## 🧪 Local Development
+## ⚠️ Important Limitations
 
-For local testing, set `pwaKitURL` to:
+### Localhost Does NOT Work
+
+> 🚫 **`http://localhost:3000` will NOT work with this solution.**
+
+**Why?** The SFCC sandbox server makes the HTTP request to the PWA Kit URL server-side. Your SFCC sandbox (running in Salesforce's cloud) cannot reach `localhost` on your machine.
+
+**Solution:** You MUST deploy your PWA Kit app to **Managed Runtime** and use the production URL:
+
 ```
-http://localhost:3000
+https://your-project-name.mobify-storefront.com
 ```
 
-**Note:** Your local PWA Kit must be running and accessible from your SFCC sandbox. This may require VPN or tunneling depending on your network setup.
+### Create Managed Runtime Environment
+
+1. Go to [Runtime Admin](https://runtime.commercecloud.com/)
+2. Create a new project or use an existing one
+3. Deploy your PWA Kit app:
+   ```bash
+   cd demo-multisite-app
+   npm run push -- -m "Deploy for Page Designer"
+   ```
+4. Get your Managed Runtime URL (e.g., `https://your-project.mobify-storefront.com`)
+5. Update the service credential in SFCC with this URL
+
+---
+
+## 🎨 UI vs Functionality in Page Designer
+
+> ⚠️ **Important:** In Page Designer preview, the PWA Kit **UI will render** but **functionality and events will NOT work**.
+
+### What Works in Page Designer:
+| Feature | Status |
+|---------|--------|
+| ✅ Visual layout | Works |
+| ✅ Component rendering | Works |
+| ✅ Styling/CSS | Works |
+| ✅ Images and static content | Works |
+| ✅ Drag-and-drop components | Works |
+| ✅ Add/remove components | Works |
+
+### What Does NOT Work in Page Designer:
+| Feature | Status | Reason |
+|---------|--------|--------|
+| ❌ Click events | Not working | Captured by Page Designer |
+| ❌ Form submissions | Not working | No JavaScript execution context |
+| ❌ Add to cart | Not working | API calls blocked |
+| ❌ Navigation links | Not working | Would navigate away from editor |
+| ❌ Interactive carousels | Not working | JavaScript events blocked |
+| ❌ API data fetching | Not working | Different execution context |
+
+### Why?
+
+Page Designer loads the PWA Kit HTML as a **static preview**. The JavaScript context and React hydration don't execute within the Page Designer iframe. This is by design - Page Designer needs to capture clicks for component selection/editing.
+
+### Full Functionality Available:
+
+- ✅ **Published storefront** - Full PWA Kit functionality works on the live site
+- ✅ **Direct PWA Kit URL** - Visit `https://your-mrt-url.com/page/{pageId}` for full interactivity
 
 ---
 
