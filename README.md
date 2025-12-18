@@ -154,6 +154,47 @@ server.get('GetContent', server.middleware.include, function (req, res, next) {
 
 ---
 
+### 5. Metadata - Site Preference Definition
+**`meta/system-objecttype-extensions.xml`**
+
+This file defines the custom site preference used to store the PWA Kit URL. **You must import this file** to create the `pwaKitURL` site preference.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <type-extension type-id="SitePreferences">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="pwaKitURL">
+                <display-name xml:lang="x-default">PWA Kit URL</display-name>
+                <description xml:lang="x-default">Base URL for the PWA Kit application 
+                    (e.g., https://your-pwa-app.com). Must be publicly accessible.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="PWAKit">
+                <display-name xml:lang="x-default">PWA Kit</display-name>
+                <attribute attribute-id="pwaKitURL"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+</metadata>
+```
+
+**What this creates:**
+| Element | Description |
+|---------|-------------|
+| `pwaKitURL` | Custom site preference attribute (String type) |
+| `PWAKit` | Attribute group - organizes the preference under "PWA Kit" tab in Business Manager |
+
+**After import, you'll find it at:**
+- **Merchant Tools** → **Site Preferences** → **Custom Preferences** → **PWA Kit** tab
+
+---
+
 ## 🚀 Setup Guide
 
 ### Step 1: Configure SFCC
@@ -164,15 +205,22 @@ Upload `app_custom_storefront` cartridge and add to cartridge path:
 app_custom_storefront:app_storefront_base:...
 ```
 
-#### 1.2 Create Site Preference for PWA Kit URL
+#### 1.2 Import Metadata (Required)
 
-**Option A: Import Metadata**
-Import the system object extension:
-```
-app_custom_storefront/meta/system-objecttype-extensions.xml
-```
+Import the system object extension to create the `pwaKitURL` site preference:
 
-**Option B: Create Manually**
+1. Go to **Business Manager** → **Administration** → **Site Development** → **Import & Export**
+2. Click **Upload** under "Import & Export Files"
+3. Upload the file: `app_custom_storefront/meta/system-objecttype-extensions.xml`
+4. Go back to **Import & Export**
+5. Click **Import** under "Meta Data"
+6. Select the uploaded file and click **Next** → **Import**
+
+**What gets created:**
+- A new **PWA Kit** group under Site Preferences → Custom Preferences
+- A `pwaKitURL` attribute to store your Managed Runtime URL
+
+**Alternative: Create Manually**
 1. Go to **Business Manager** → **Administration** → **Site Development** → **System Object Types**
 2. Select **SitePreferences** → **Attribute Definitions** → **New**
 3. Create attribute:
@@ -306,6 +354,7 @@ https://your-project.mobify-storefront.com/{siteID}/page/{pageID}?preview=true
 | `pwaPage.js` | Page controller, gets siteID |
 | `pwaPage.isml` | Template, includes PWAProxy controller |
 | `PWAProxy.js` | Makes server-side request to PWA Kit |
+| `meta/system-objecttype-extensions.xml` | Creates `pwaKitURL` site preference |
 
 ---
 
