@@ -4,6 +4,17 @@ This repository enables **visual content editing** in SFCC Page Designer for pag
 
 ---
 
+## 🔗 Related Repositories
+
+| Repository | Description |
+|------------|-------------|
+| **[demo-multisite-app](https://github.com/chagantianil/demo-multisite-app)** | PWA Kit project with Page Designer integration (required companion) |
+| **This repo (storefront-reference-architecture)** | SFCC cartridge for Page Designer proxy |
+
+> 💡 Both repositories work together. The SFCC cartridge fetches HTML from the PWA Kit app.
+
+---
+
 ## 📋 Prerequisites
 
 Before you begin, ensure you have:
@@ -301,7 +312,9 @@ After importing, update the service credential with your PWA Kit URL:
 
 #### Reference Implementation: `demo-multisite-app`
 
-A complete PWA Kit implementation exists in the sibling folder `demo-multisite-app/`. This implementation includes:
+🔗 **GitHub Repository:** [https://github.com/chagantianil/demo-multisite-app](https://github.com/chagantianil/demo-multisite-app)
+
+A complete PWA Kit implementation with Page Designer support. Clone this repository and use it as a reference or starting point. This implementation includes:
 
 | File | Description |
 |------|-------------|
