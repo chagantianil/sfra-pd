@@ -1,5 +1,0 @@
-{
-  "endpoints": [
-    {"endpoint": "getInfo", "schema": "schema.yaml", "implementation": "script"}
-  ]
-}

@@ -1,5 +1,0 @@
-{
-  "endpoints": [
-    {"endpoint": "getLoyaltyInfo", "schema": "schema.yaml", "implementation": "script"}
-  ]
-}
