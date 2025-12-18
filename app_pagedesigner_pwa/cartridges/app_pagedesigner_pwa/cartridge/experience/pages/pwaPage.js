@@ -1,46 +1,28 @@
 'use strict';
 
-// eslint-disable-next-line no-unused-vars
-/* global response */
-
 var Template = require('dw/util/Template');
 var HashMap = require('dw/util/HashMap');
-var Site = require('dw/system/Site');
 var PageRenderHelper = require('*/cartridge/experience/utilities/PageRenderHelper.js');
 
 /**
- * Render logic for the storepage.
+ * Render logic for PWA Page Designer page type.
+ * This page fetches and displays content from PWA Kit via the PWAProxy controller.
  *
- * @param {dw.experience.PageScriptContext} context The page script context object.
- * @param {dw.util.Map} [modelIn] Additional model values created by another cartridge. This will not be passed in by Commcerce Cloud Plattform.
- *
+ * @param {dw.experience.PageScriptContext} context - The page script context object
+ * @param {dw.util.Map} [modelIn] - Additional model values from another cartridge
  * @returns {string} The markup to be displayed
  */
 module.exports.render = function (context, modelIn) {
     var model = modelIn || new HashMap();
-    // Metadata similar to that used by regular SFRA pages
-    // Similar to /cartridges/modules/server/route.js getPageMetadata
-    model.action = '.'; // Relative URL to the current page
 
-    var page = context.page;
-    model.page = page;
-    model.content = context.content;
+    // Pass page to template (used for page ID in proxy call)
+    model.page = context.page;
 
-    // automatically register configured regions
-    model.regions = PageRenderHelper.getRegionModelRegistry(page);
-
+    // Enable Page Designer edit mode if applicable
     if (PageRenderHelper.isInEditMode()) {
         var HookManager = require('dw/system/HookMgr');
         HookManager.callHook('app.experience.editmode', 'editmode');
-        model.resetEditPDMode = true;
     }
 
-    model.siteID = Site.getCurrent().getID();
-
-    model.CurrentPageMetaData = PageRenderHelper.getPageMetaData(page);
-
-    // no pagecache setting here, this is dynamically determined by the components used within the page
-
-    // render the page
     return new Template('experience/pages/pwaPage').render(model).text;
 };
