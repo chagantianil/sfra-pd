@@ -4,6 +4,18 @@ This repository enables **visual content editing** in SFCC Page Designer for pag
 
 ---
 
+## 📋 Prerequisites
+
+Before you begin, ensure you have:
+
+| Requirement | Description |
+|-------------|-------------|
+| **SFCC Sandbox** | Access to Business Manager with admin rights |
+| **PWA Kit Project** | A PWA Kit project deployed to Managed Runtime |
+| **Cartridge Upload Tool** | VS Code + Prophet Debugger OR WebDAV client |
+
+---
+
 ## 🎯 What This Does
 
 Merchants can use SFCC Page Designer to:
@@ -285,58 +297,102 @@ After importing, update the service credential with your PWA Kit URL:
 
 ### Step 2: Configure PWA Kit
 
-#### 2.1 Allow SFCC Domain in `ssr.js`
+> ⚠️ **Prerequisites:** You need a PWA Kit project deployed to Managed Runtime. This cartridge fetches HTML from your PWA Kit app.
 
-In your PWA Kit project, update `app/ssr.js` to allow your SFCC domain:
+#### 2.1 Create Page Route in PWA Kit
 
-```javascript
-// Add SFCC domains to allowed origins for the HTTP request
-const runtime = getRuntime();
-
-const options = {
-    // ... other options
-    proxyConfigs: [
-        {
-            host: 'your-sfcc-instance.demandware.net',
-            path: 'on/demandware.store'
-        }
-    ]
-};
-```
-
-Or in the server configuration, ensure SFCC domains can reach your Managed Runtime.
-
-#### 2.2 Handle `preview=true` Parameter
-
-In your PWA Kit components, detect preview mode and add Page Designer classes:
+Your PWA Kit app needs a route that handles Page Designer pages. Create a route for `/{siteID}/page/{pageID}`:
 
 ```jsx
-// Example: ProductTile component
-import { useLocation } from 'react-router-dom';
+// app/routes.jsx
+import PageDesignerPage from './pages/page-designer'
 
-const ProductTile = ({ product, componentId }) => {
-    const location = useLocation();
-    const isPreview = new URLSearchParams(location.search).get('preview') === 'true';
+const routes = [
+    // ... other routes
+    {
+        path: '/:siteId/page/:pageId',
+        component: PageDesignerPage
+    }
+]
+```
+
+#### 2.2 Create Page Designer Page Component
+
+Create a page component that fetches and renders Page Designer content:
+
+```jsx
+// app/pages/page-designer/index.jsx
+import React from 'react'
+import { useParams, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+
+const PageDesignerPage = () => {
+    const { siteId, pageId } = useParams()
+    const location = useLocation()
+    const isPreview = new URLSearchParams(location.search).get('preview') === 'true'
+
+    // Fetch page content from SFCC
+    const { data: pageData } = useQuery({
+        queryKey: ['page', pageId],
+        queryFn: () => fetchPageContent(siteId, pageId)
+    })
 
     return (
-        <div 
-            className={isPreview ? 'experience-component experience-product-tile' : ''}
-            data-component-id={isPreview ? componentId : undefined}
-        >
-            {/* Component content */}
+        <div className={isPreview ? 'experience-page' : ''}>
+            {/* Render your components based on pageData */}
+            {pageData?.regions?.map(region => (
+                <Region key={region.id} region={region} isPreview={isPreview} />
+            ))}
         </div>
-    );
-};
+    )
+}
+```
+
+#### 2.3 Add Page Designer Classes (Preview Mode)
+
+When `?preview=true` is in the URL, add special classes and attributes so Page Designer can detect components:
+
+```jsx
+// Example: Component wrapper
+const ComponentWrapper = ({ component, isPreview, children }) => {
+    const previewProps = isPreview ? {
+        className: 'experience-component',
+        'data-component-id': component.id,
+        'data-component-type': component.typeId
+    } : {}
+
+    return (
+        <div {...previewProps}>
+            {children}
+        </div>
+    )
+}
 ```
 
 **Required Attributes for Page Designer:**
-- `class="experience-component"` - Marks element as a Page Designer component
-- `data-component-id="{componentId}"` - Unique component identifier
+| Attribute | Purpose |
+|-----------|---------|
+| `class="experience-component"` | Marks element as a Page Designer component |
+| `data-component-id="{id}"` | Unique component identifier |
+| `data-component-type="{typeId}"` | Component type (optional but recommended) |
 
-#### 2.3 Deploy to Managed Runtime
+#### 2.4 Allow SFCC to Reach Managed Runtime
+
+Ensure your Managed Runtime is accessible from SFCC:
+
+1. **Managed Runtime** is publicly accessible by default
+2. If using custom domains, ensure SSL certificates are valid
+3. For **local development**, use a tunnel service (ngrok) to expose localhost
+
+#### 2.5 Deploy to Managed Runtime
 
 ```bash
 npm run push
+```
+
+Verify deployment by visiting:
+```
+https://your-project.mobify-storefront.com/{siteID}/page/test?preview=true
 ```
 
 ---
