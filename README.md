@@ -113,32 +113,25 @@ module.exports.render = function (context, modelIn) {
 
 ---
 
-### 4. Proxy Controller (The Key Component)
+### 4. Proxy Controller
 **`controllers/PWAProxy.js`**
 ```javascript
 server.get('GetContent', server.middleware.include, function (req, res, next) {
-    var HTTPClient = require('dw/net/HTTPClient');
     var Site = require('dw/system/Site');
+    var pwaKitService = require('*/cartridge/scripts/services/pwaKitService');
 
-    // Get site ID from current site (not from URL params)
     var siteID = Site.getCurrent().getID();
     var pageID = req.querystring.pageID;
 
-    // Get PWA Kit URL from Site Preferences
-    var pwaKitBaseURL = Site.getCurrent().getCustomPreferenceValue('pwaKitURL');
-    
-    // Construct URL: {pwaKitURL}/{siteID}/page/{pageID}?preview=true
-    var pwaURL = pwaKitBaseURL + '/' + siteID + '/page/' + pageID + '?preview=true';
+    // Use the SFCC Service Framework to fetch content
+    var result = pwaKitService.getPageContent(siteID, pageID);
 
-    // Make server-side HTTP request (bypasses CORS!)
-    var httpClient = new HTTPClient();
-    httpClient.setTimeout(10000);
-    httpClient.open('GET', pwaURL);
-    httpClient.send();
-
-    if (httpClient.statusCode === 200) {
+    if (result.success) {
         res.setContentType('text/html');
-        res.print(httpClient.text);  // Return PWA Kit HTML to Page Designer
+        res.print(result.content);
+    } else {
+        res.setStatusCode(result.statusCode || 500);
+        res.json({ error: result.error });
     }
     
     return next();
@@ -147,10 +140,39 @@ server.get('GetContent', server.middleware.include, function (req, res, next) {
 
 **Key Points:**
 - Uses `server.middleware.include` for remote include support
-- Gets `siteID` from `Site.getCurrent().getID()` (not URL params)
-- Gets PWA Kit base URL from **Site Preferences** (`pwaKitURL`)
-- Appends `?preview=true` to tell PWA Kit to add Page Designer attributes
-- Makes **server-side HTTP request** using `dw/net/HTTPClient`
+- Uses **SFCC Service Framework** instead of direct HTTPClient
+- Service provides better error handling, logging, and circuit breaker support
+
+---
+
+### 5. PWA Kit Service (HTTP Service)
+**`scripts/services/pwaKitService.js`**
+```javascript
+var LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
+
+function getPWAKitService() {
+    return LocalServiceRegistry.createService('pwakit.http.service', {
+        createRequest: function (svc, params) {
+            var url = baseURL + '/' + params.siteID + '/page/' + params.pageID + '?preview=true';
+            svc.setURL(url);
+            svc.setRequestMethod('GET');
+            return null;
+        },
+        parseResponse: function (svc, client) {
+            return {
+                statusCode: client.statusCode,
+                text: client.text
+            };
+        }
+    });
+}
+```
+
+**Benefits of Service Framework:**
+- ✅ **Logging** - All requests logged in Business Manager
+- ✅ **Circuit Breaker** - Automatic failure handling
+- ✅ **Timeout Configuration** - Configurable via Business Manager
+- ✅ **Mock Mode** - Test without actual service calls
 
 ---
 
@@ -195,6 +217,51 @@ This file defines the custom site preference used to store the PWA Kit URL. **Yo
 
 ---
 
+### 7. Service Metadata
+**`meta/services.xml`**
+
+This file defines the HTTP service used to call PWA Kit. **You must import this file** to create the service.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<services xmlns="http://www.demandware.com/xml/impex/services/2014-09-26">
+    <!-- Service Credential - Stores the base URL -->
+    <service-credential id="pwakit.http.credential">
+        <url>https://your-pwa-kit-url.mobify-storefront.com</url>
+    </service-credential>
+
+    <!-- Service Profile - Timeout and circuit breaker settings -->
+    <service-profile id="pwakit.http.profile">
+        <timeout-millis>10000</timeout-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>5</cb-calls>
+        <cb-millis>10000</cb-millis>
+    </service-profile>
+
+    <!-- Service Definition -->
+    <service id="pwakit.http.service">
+        <type>HTTP</type>
+        <enabled>true</enabled>
+        <log-prefix>PWAKit</log-prefix>
+        <comm-log-enabled>true</comm-log-enabled>
+        <profile-id>pwakit.http.profile</profile-id>
+        <credential-id>pwakit.http.credential</credential-id>
+    </service>
+</services>
+```
+
+**What this creates:**
+| Element | Description |
+|---------|-------------|
+| `pwakit.http.service` | The HTTP service definition |
+| `pwakit.http.profile` | Timeout (10s) and circuit breaker settings |
+| `pwakit.http.credential` | Stores the PWA Kit base URL |
+
+**After import, you'll find it at:**
+- **Administration** → **Operations** → **Services**
+
+---
+
 ## 🚀 Setup Guide
 
 ### Step 1: Configure SFCC
@@ -205,30 +272,47 @@ Upload `app_custom_storefront` cartridge and add to cartridge path:
 app_custom_storefront:app_storefront_base:...
 ```
 
-#### 1.2 Import Metadata (Required)
+#### 1.2 Import Site Preference Metadata
 
 Import the system object extension to create the `pwaKitURL` site preference:
 
 1. Go to **Business Manager** → **Administration** → **Site Development** → **Import & Export**
 2. Click **Upload** under "Import & Export Files"
-3. Upload the file: `app_custom_storefront/meta/system-objecttype-extensions.xml`
-4. Go back to **Import & Export**
-5. Click **Import** under "Meta Data"
-6. Select the uploaded file and click **Next** → **Import**
+3. Upload: `app_custom_storefront/meta/system-objecttype-extensions.xml`
+4. Click **Import** under "Meta Data"
+5. Select the uploaded file and click **Next** → **Import**
+
+#### 1.3 Import Service Metadata (Required)
+
+Import the service definition for the PWA Kit HTTP service:
+
+1. Go to **Business Manager** → **Administration** → **Operations** → **Import & Export**
+2. Click **Upload** under "Import & Export Files"
+3. Upload: `app_custom_storefront/meta/services.xml`
+4. Click **Import** under "Services"
+5. Select the uploaded file and click **Next** → **Import**
 
 **What gets created:**
-- A new **PWA Kit** group under Site Preferences → Custom Preferences
-- A `pwaKitURL` attribute to store your Managed Runtime URL
+| Item | Location |
+|------|----------|
+| `pwaKitURL` site preference | Merchant Tools → Site Preferences → Custom Preferences |
+| `pwakit.http.service` | Administration → Operations → Services |
+| `pwakit.http.credential` | Administration → Operations → Services → Credentials |
+| `pwakit.http.profile` | Administration → Operations → Services → Profiles |
 
-**Alternative: Create Manually**
-1. Go to **Business Manager** → **Administration** → **Site Development** → **System Object Types**
-2. Select **SitePreferences** → **Attribute Definitions** → **New**
-3. Create attribute:
-   - **ID**: `pwaKitURL`
-   - **Display Name**: PWA Kit URL
-   - **Value Type**: String
+#### 1.4 Configure Service Credential
 
-#### 1.3 Set the PWA Kit URL Value
+After importing, update the service credential with your PWA Kit URL:
+
+1. Go to **Administration** → **Operations** → **Services** → **Credentials**
+2. Click on **pwakit.http.credential**
+3. Update the **URL** to your Managed Runtime URL:
+   ```
+   https://your-project.mobify-storefront.com
+   ```
+4. Click **Apply**
+
+#### 1.5 Set the PWA Kit URL Site Preference
 1. Go to **Merchant Tools** → **Site Preferences** → **Custom Preferences**
 2. Set **PWA Kit URL** to your Managed Runtime URL:
    ```
@@ -353,8 +437,10 @@ https://your-project.mobify-storefront.com/{siteID}/page/{pageID}?preview=true
 | `pwaPage.json` | Registers "PWA Page" type in Page Designer |
 | `pwaPage.js` | Page controller, gets siteID |
 | `pwaPage.isml` | Template, includes PWAProxy controller |
-| `PWAProxy.js` | Makes server-side request to PWA Kit |
+| `PWAProxy.js` | Controller that fetches content via service |
+| `scripts/services/pwaKitService.js` | SFCC Service Framework implementation |
 | `meta/system-objecttype-extensions.xml` | Creates `pwaKitURL` site preference |
+| `meta/services.xml` | Creates HTTP service, profile, and credential |
 
 ---
 

@@ -17,8 +17,8 @@ var server = require('server');
  * @param {serverfunction} - get
  */
 server.get('GetContent', server.middleware.include, function (req, res, next) {
-    var HTTPClient = require('dw/net/HTTPClient');
     var Site = require('dw/system/Site');
+    var pwaKitService = require('*/cartridge/scripts/services/pwaKitService');
 
     // Get siteID directly from the current site
     var siteID = Site.getCurrent().getID();
@@ -30,46 +30,28 @@ server.get('GetContent', server.middleware.include, function (req, res, next) {
         return next();
     }
 
-    // Get PWA Kit URL from Site Preferences
+    // Get PWA Kit URL from Site Preferences (for validation)
     var pwaKitBaseURL = Site.getCurrent().getCustomPreferenceValue('pwaKitURL');
-    
+
     if (!pwaKitBaseURL || pwaKitBaseURL === null || pwaKitBaseURL === '') {
         res.setStatusCode(500);
-        res.json({ 
-            error: 'PWA Kit URL not configured. Please set the "PWA Kit URL" preference in Business Manager > Site Preferences > Custom Preferences > PWA Kit.' 
+        res.json({
+            error: 'PWA Kit URL not configured. Please set the "PWA Kit URL" preference in Business Manager > Site Preferences > Custom Preferences > PWA Kit.'
         });
         return next();
     }
 
-    // Remove trailing slash if present
-    var baseURL = pwaKitBaseURL.toString().replace(/\/$/, '');
-    
-    // Construct the full URL: {baseURL}/{siteID}/page/{pageID}?preview=true
-    var pwaURL = baseURL + '/' + siteID + '/page/' + pageID + '?preview=true';
+    // Use the service framework to fetch content
+    var result = pwaKitService.getPageContent(siteID, pageID);
 
-    var httpClient = new HTTPClient();
-    httpClient.setTimeout(10000);
-    httpClient.open('GET', pwaURL);
-
-    try {
-        httpClient.send();
-
-        if (httpClient.statusCode === 200) {
-            res.setContentType('text/html');
-            res.print(httpClient.text);
-        } else {
-            res.setStatusCode(httpClient.statusCode || 500);
-            res.json({ 
-                error: 'Failed to fetch PWA content', 
-                status: httpClient.statusCode,
-                url: pwaURL 
-            });
-        }
-    } catch (e) {
-        res.setStatusCode(500);
-        res.json({ 
-            error: 'Error fetching PWA content: ' + e.message,
-            url: pwaURL 
+    if (result.success) {
+        res.setContentType('text/html');
+        res.print(result.content);
+    } else {
+        res.setStatusCode(result.statusCode || 500);
+        res.json({
+            error: result.error,
+            status: result.statusCode
         });
     }
 
@@ -77,5 +59,3 @@ server.get('GetContent', server.middleware.include, function (req, res, next) {
 });
 
 module.exports = server.exports();
-
-
