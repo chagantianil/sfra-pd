@@ -226,9 +226,9 @@ This file defines the HTTP service used to call PWA Kit. **You must import this 
 ### Step 1: Configure SFCC
 
 #### 1.1 Upload Cartridge
-Upload `app_custom_storefront` cartridge and add to cartridge path:
+Upload `app_pagedesigner_pwa` cartridge and add to cartridge path:
 ```
-app_custom_storefront:app_storefront_base:...
+app_pagedesigner_pwa:app_storefront_base:...
 ```
 
 #### 1.2 Import Service Metadata
@@ -237,7 +237,7 @@ Import the service definition for the PWA Kit HTTP service:
 
 1. Go to **Business Manager** → **Administration** → **Operations** → **Import & Export**
 2. Click **Upload** under "Import & Export Files"
-3. Upload: `app_custom_storefront/meta/services.xml`
+3. Upload: `app_pagedesigner_pwa/meta/services.xml`
 4. Click **Import** under "Services"
 5. Select the uploaded file and click **Next** → **Import**
 

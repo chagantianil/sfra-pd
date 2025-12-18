@@ -1,5 +1,0 @@
-{
-  "endpoints": [
-    {"endpoint": "setNewsletterInfo", "schema": "schema.yaml", "implementation": "script"}
-  ]
-}
