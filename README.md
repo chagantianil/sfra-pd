@@ -1,104 +1,246 @@
 # SFRA Page Designer + PWA Kit Integration
 
-This repository contains a custom SFRA implementation that integrates **Salesforce Page Designer** with **PWA Kit**, enabling visual content management for headless PWA storefronts.
+This repository enables **visual content editing** in SFCC Page Designer for pages rendered by **PWA Kit** on the Managed Runtime.
 
-## Overview
+---
 
-This integration allows merchants to use SFCC's Page Designer to visually edit pages that are rendered by PWA Kit on the Managed Runtime. Components can be added, removed, and rearranged in Page Designer, with changes automatically reflected in the PWA Kit storefront.
+## 🎯 What This Does
 
-## How It Works
+Merchants can use SFCC Page Designer to:
+- ✅ **Add components** to PWA Kit pages
+- ✅ **Remove components** from PWA Kit pages  
+- ✅ **Rearrange components** via drag-and-drop
+- ✅ **See live preview** of PWA Kit rendered content
+- ✅ **Auto-sync changes** - updates are automatically fetched from Managed Runtime
+
+---
+
+## 🔄 How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Page Designer (SFCC)                              │
-│                                                                             │
-│  1. Merchant opens page in Page Designer                                    │
-│  2. SFCC sends service request to PWA Kit with ?preview=true                │
-│  3. PWA Kit returns HTML with Page Designer classes/attributes              │
-│  4. HTML is rendered in Page Designer for visual editing                    │
-│  5. On component update, latest HTML is fetched and synced                  │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         PAGE DESIGNER (SFCC)                               │
+│                                                                            │
+│   1. Merchant opens page in Page Designer                                  │
+│   2. pwaPage.isml triggers <isinclude> to PWAProxy controller              │
+│   3. PWAProxy makes SERVER-SIDE HTTP request (bypasses CORS)               │
+│   4. Request URL: {pwaKitURL}/{siteID}/page/{pageID}?preview=true          │
+└────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        PWA Kit (Managed Runtime)                            │
-│                                                                             │
-│  • Receives request with preview=true parameter                             │
-│  • Adds CSS classes and data attributes for Page Designer detection        │
-│  • Returns component HTML that Page Designer can parse                      │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      PWA KIT (Managed Runtime)                             │
+│                                                                            │
+│   5. PWA Kit receives request with ?preview=true                           │
+│   6. Adds Page Designer CSS classes & data attributes to components        │
+│   7. Returns HTML that Page Designer can parse and edit                    │
+└────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         PAGE DESIGNER (SFCC)                               │
+│                                                                            │
+│   8. HTML rendered in Page Designer with editable components               │
+│   9. Merchant adds/removes/rearranges components                           │
+│  10. On save, latest HTML is re-fetched and synced                         │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Concepts
+### Why Server-Side Request?
 
-1. **SFCC Domain Allowlisting**: SFCC domain URLs are added to `ssr.js` in PWA Kit to allow SFCC to fetch page HTML from the Managed Runtime.
-
-2. **Service Request**: A server-side request is made from SFCC to the PWA Kit page URL to retrieve the page HTML, bypassing CORS restrictions.
-
-3. **Preview Mode**: When sending the service request, a `preview=true` parameter is passed to PWA Kit.
-
-4. **Component Detection**: In PWA Kit, when `preview=true` is detected, required CSS classes and data attributes are added to components (similar to how SFRA handles Page Designer components).
-
-5. **Visual Editing**: Since the HTML loaded in Page Designer contains the proper classes and attributes, components can be added, removed, and rearranged visually.
-
-6. **Auto-Sync**: When a component is updated in Page Designer, the latest HTML is automatically fetched from the Managed Runtime and synced back to SFCC.
+Direct browser requests from SFCC to PWA Kit would fail due to **CORS restrictions**. The `PWAProxy` controller makes the request **server-side**, completely bypassing CORS.
 
 ---
 
-## Setup Guide
+## 📁 SFCC Files Explained
 
-### Prerequisites
-
-- SFCC sandbox with Page Designer access
-- PWA Kit project deployed to Managed Runtime
-- Business Manager access for custom preferences
+### 1. Page Type Definition
+**`experience/pages/pwaPage.json`**
+```json
+{
+    "name": "PWA Page",
+    "description": "PWA Page Type",
+    "region_definitions": [
+        {
+            "id": "main",
+            "name": "Main Region",
+            "component_type_exclusions": []
+        }
+    ]
+}
+```
+Registers "PWA Page" as a page type in Page Designer.
 
 ---
 
-### Step 1: Configure PWA Kit
-
-#### 1.1 Update `ssr.js` to Allow SFCC Domains
-
-In your PWA Kit project, update `ssr.js` to add your SFCC domain to the allowed origins:
-
+### 2. Page Controller
+**`experience/pages/pwaPage.js`**
 ```javascript
-// app/ssr.js
-const allowedOrigins = [
-    'https://your-sfcc-sandbox.demandware.net',
-    'https://your-production-domain.com'
-];
+var Site = require('dw/system/Site');
+
+module.exports.render = function (context, modelIn) {
+    var model = modelIn || new HashMap();
+    
+    var page = context.page;
+    model.page = page;
+    model.siteID = Site.getCurrent().getID();  // Gets current site ID dynamically
+    
+    // ... other setup code
+    
+    return new Template('experience/pages/pwaPage').render(model).text;
+};
+```
+- Gets the **current site ID** using `Site.getCurrent().getID()`
+- Passes page data to the ISML template
+
+---
+
+### 3. Page Template
+**`templates/default/experience/pages/pwaPage.isml`**
+```html
+<div class="storepage" id="${pdict.page.ID}">
+    <div class="container">
+        <div class="row">
+            <div id="pageid-ajax">
+                <isinclude url="${URLUtils.url('PWAProxy-GetContent', 'pageID', pdict.page.ID)}" />
+            </div>
+        </div>
+    </div>
+</div>
+```
+- Uses `<isinclude>` to call the PWAProxy controller
+- Passes only `pageID` (siteID is fetched server-side)
+
+---
+
+### 4. Proxy Controller (The Key Component)
+**`controllers/PWAProxy.js`**
+```javascript
+server.get('GetContent', server.middleware.include, function (req, res, next) {
+    var HTTPClient = require('dw/net/HTTPClient');
+    var Site = require('dw/system/Site');
+
+    // Get site ID from current site (not from URL params)
+    var siteID = Site.getCurrent().getID();
+    var pageID = req.querystring.pageID;
+
+    // Get PWA Kit URL from Site Preferences
+    var pwaKitBaseURL = Site.getCurrent().getCustomPreferenceValue('pwaKitURL');
+    
+    // Construct URL: {pwaKitURL}/{siteID}/page/{pageID}?preview=true
+    var pwaURL = pwaKitBaseURL + '/' + siteID + '/page/' + pageID + '?preview=true';
+
+    // Make server-side HTTP request (bypasses CORS!)
+    var httpClient = new HTTPClient();
+    httpClient.setTimeout(10000);
+    httpClient.open('GET', pwaURL);
+    httpClient.send();
+
+    if (httpClient.statusCode === 200) {
+        res.setContentType('text/html');
+        res.print(httpClient.text);  // Return PWA Kit HTML to Page Designer
+    }
+    
+    return next();
+});
 ```
 
-#### 1.2 Handle Preview Mode in Components
+**Key Points:**
+- Uses `server.middleware.include` for remote include support
+- Gets `siteID` from `Site.getCurrent().getID()` (not URL params)
+- Gets PWA Kit base URL from **Site Preferences** (`pwaKitURL`)
+- Appends `?preview=true` to tell PWA Kit to add Page Designer attributes
+- Makes **server-side HTTP request** using `dw/net/HTTPClient`
 
-In your PWA Kit components, check for the `preview` query parameter and add Page Designer classes/attributes:
+---
+
+## 🚀 Setup Guide
+
+### Step 1: Configure SFCC
+
+#### 1.1 Upload Cartridge
+Upload `app_custom_storefront` cartridge and add to cartridge path:
+```
+app_custom_storefront:app_storefront_base:...
+```
+
+#### 1.2 Create Site Preference for PWA Kit URL
+
+**Option A: Import Metadata**
+Import the system object extension:
+```
+app_custom_storefront/meta/system-objecttype-extensions.xml
+```
+
+**Option B: Create Manually**
+1. Go to **Business Manager** → **Administration** → **Site Development** → **System Object Types**
+2. Select **SitePreferences** → **Attribute Definitions** → **New**
+3. Create attribute:
+   - **ID**: `pwaKitURL`
+   - **Display Name**: PWA Kit URL
+   - **Value Type**: String
+
+#### 1.3 Set the PWA Kit URL Value
+1. Go to **Merchant Tools** → **Site Preferences** → **Custom Preferences**
+2. Set **PWA Kit URL** to your Managed Runtime URL:
+   ```
+   https://your-project.mobify-storefront.com
+   ```
+   (No trailing slash)
+
+---
+
+### Step 2: Configure PWA Kit
+
+#### 2.1 Allow SFCC Domain in `ssr.js`
+
+In your PWA Kit project, update `app/ssr.js` to allow your SFCC domain:
 
 ```javascript
-// Example: In your page component
+// Add SFCC domains to allowed origins for the HTTP request
+const runtime = getRuntime();
+
+const options = {
+    // ... other options
+    proxyConfigs: [
+        {
+            host: 'your-sfcc-instance.demandware.net',
+            path: 'on/demandware.store'
+        }
+    ]
+};
+```
+
+Or in the server configuration, ensure SFCC domains can reach your Managed Runtime.
+
+#### 2.2 Handle `preview=true` Parameter
+
+In your PWA Kit components, detect preview mode and add Page Designer classes:
+
+```jsx
+// Example: ProductTile component
 import { useLocation } from 'react-router-dom';
 
-const MyComponent = ({ componentId, ...props }) => {
+const ProductTile = ({ product, componentId }) => {
     const location = useLocation();
-    const searchParams = new URLSearchParams(location.search);
-    const isPreview = searchParams.get('preview') === 'true';
-
-    // Add Page Designer attributes when in preview mode
-    const pdAttributes = isPreview ? {
-        'data-component-id': componentId,
-        className: 'experience-component'
-    } : {};
+    const isPreview = new URLSearchParams(location.search).get('preview') === 'true';
 
     return (
-        <div {...pdAttributes}>
+        <div 
+            className={isPreview ? 'experience-component experience-product-tile' : ''}
+            data-component-id={isPreview ? componentId : undefined}
+        >
             {/* Component content */}
         </div>
     );
 };
 ```
 
-#### 1.3 Deploy to Managed Runtime
+**Required Attributes for Page Designer:**
+- `class="experience-component"` - Marks element as a Page Designer component
+- `data-component-id="{componentId}"` - Unique component identifier
 
-Deploy your PWA Kit changes to the Managed Runtime:
+#### 2.3 Deploy to Managed Runtime
 
 ```bash
 npm run push
@@ -106,135 +248,78 @@ npm run push
 
 ---
 
-### Step 2: Configure SFCC
-
-#### 2.1 Create Custom Site Preference
-
-1. Go to **Business Manager** → **Administration** → **Site Development** → **System Object Types**
-2. Find or create a custom preference group for PWA Kit settings
-3. Add a custom attribute:
-   - **ID**: `pwaKitURL`
-   - **Display Name**: PWA Kit URL
-   - **Type**: String
-   - **Description**: Base URL of the PWA Kit Managed Runtime (e.g., `https://your-project.mobify-storefront.com`)
-
-#### 2.2 Set the PWA Kit URL
-
-1. Go to **Business Manager** → **Merchant Tools** → **Site Preferences** → **Custom Preferences**
-2. Set the **PWA Kit URL** to your Managed Runtime URL (e.g., `https://your-project.mobify-storefront.com`)
-
-#### 2.3 Upload the Custom Cartridge
-
-1. Upload the `app_custom_storefront` cartridge to your sandbox
-2. Add it to your cartridge path:
-   ```
-   app_custom_storefront:app_storefront_base:...
-   ```
-
-#### 2.4 Import System Object Extensions (Optional)
-
-If you need the custom site preference, import the metadata:
-
-```
-app_custom_storefront/meta/system-objecttype-extensions.xml
-```
-
----
-
-### Step 3: Create a PWA Page Type in Page Designer
-
-#### 3.1 Register the Page Type
-
-The custom cartridge includes a `pwaPage` page type:
-
-- **Location**: `app_custom_storefront/cartridges/app_custom_storefront/cartridge/experience/pages/`
-- **Files**:
-  - `pwaPage.js` - Page controller
-  - `pwaPage.json` - Page type definition
-
-#### 3.2 Create a Page in Page Designer
+### Step 3: Create Page in Page Designer
 
 1. Go to **Business Manager** → **Merchant Tools** → **Content** → **Page Designer**
-2. Create a new page using the **PWA Page** type
-3. Add and arrange components as needed
-4. Publish the page
+2. Click **New Page**
+3. Select **PWA Page** as the page type
+4. Add components to the **Main Region**
+5. **Publish** the page
 
 ---
 
-## Architecture
+## 🔧 Troubleshooting
 
-### SFCC Components
+### "PWA Kit URL not configured" Error
+**Solution:** Set the `pwaKitURL` site preference in Business Manager:
+- **Merchant Tools** → **Site Preferences** → **Custom Preferences**
+- Enter your Managed Runtime URL (e.g., `https://your-project.mobify-storefront.com`)
 
-| File | Description |
-|------|-------------|
-| `controllers/PWAProxy.js` | Server-side proxy that fetches HTML from PWA Kit |
-| `experience/pages/pwaPage.js` | Page Designer page type controller |
-| `experience/pages/pwaPage.json` | Page type definition |
-| `templates/default/experience/pages/pwaPage.isml` | Page template with remote include |
+### Empty Page / No Content
+**Possible Causes:**
+1. PWA Kit URL is incorrect
+2. PWA Kit is not deployed
+3. Network/firewall blocking SFCC → Managed Runtime
 
-### Request Flow
+**Debug:** Check the PWA Kit URL by visiting directly:
+```
+https://your-project.mobify-storefront.com/{siteID}/page/{pageID}?preview=true
+```
 
-1. **Page Designer opens page** → Triggers `pwaPage.js`
-2. **pwaPage.isml** → Includes `PWAProxy-GetContent` controller
-3. **PWAProxy.js** → Makes HTTP request to PWA Kit with `?preview=true`
-4. **PWA Kit** → Returns HTML with Page Designer attributes
-5. **Page Designer** → Renders HTML and enables visual editing
+### Components Not Editable in Page Designer
+**Solution:** Ensure PWA Kit components include Page Designer classes when `preview=true`:
+```html
+<div class="experience-component" data-component-id="...">
+```
 
----
-
-## Troubleshooting
-
-### CORS Errors
-
-If you encounter CORS errors:
-- Ensure your SFCC domain is added to the allowed origins in PWA Kit's `ssr.js`
-- The `PWAProxy` controller makes server-side requests to bypass browser CORS restrictions
-
-### Components Not Detected
-
-If Page Designer doesn't detect components:
-- Verify the `preview=true` parameter is being passed
-- Check that PWA Kit components have the required CSS classes and data attributes
-- Inspect the HTML returned from PWA Kit for proper Page Designer markup
-
-### Connection Timeouts
-
-If requests to PWA Kit timeout:
-- Check the Managed Runtime is accessible
-- Verify the `pwaKitURL` site preference is correct
-- Check network/firewall settings between SFCC and Managed Runtime
-
-### Empty Page Content
-
-If the page appears empty:
-- Verify the PWA Kit URL is correctly configured in Site Preferences
-- Check the PWAProxy controller logs for errors
-- Test the PWA Kit URL directly in a browser with `?preview=true`
+### Connection Timeout
+**Solution:** 
+- Increase timeout in `PWAProxy.js` (default: 10000ms)
+- Check Managed Runtime health
+- Verify network connectivity
 
 ---
 
-## Development
+## 📋 Quick Reference
 
-### Local Testing
+| Site Preference | Value | Example |
+|----------------|-------|---------|
+| `pwaKitURL` | PWA Kit Managed Runtime URL | `https://your-project.mobify-storefront.com` |
 
-For local development, you can point the `pwaKitURL` to your local PWA Kit instance:
+| Request URL Format | Description |
+|-------------------|-------------|
+| `{pwaKitURL}/{siteID}/page/{pageID}?preview=true` | Full URL constructed by PWAProxy |
 
+| File | Purpose |
+|------|---------|
+| `pwaPage.json` | Registers "PWA Page" type in Page Designer |
+| `pwaPage.js` | Page controller, gets siteID |
+| `pwaPage.isml` | Template, includes PWAProxy controller |
+| `PWAProxy.js` | Makes server-side request to PWA Kit |
+
+---
+
+## 🧪 Local Development
+
+For local testing, set `pwaKitURL` to:
 ```
 http://localhost:3000
 ```
 
-Note: This requires proper CORS configuration on your local PWA Kit server.
-
-### Building Client-Side Assets
-
-```bash
-cd app_custom_storefront
-npm install
-npm run build
-```
+**Note:** Your local PWA Kit must be running and accessible from your SFCC sandbox. This may require VPN or tunneling depending on your network setup.
 
 ---
 
-## License
+## 📄 License
 
-This project is based on the Salesforce Commerce Cloud Storefront Reference Architecture (SFRA).
+Based on Salesforce Commerce Cloud Storefront Reference Architecture (SFRA).
