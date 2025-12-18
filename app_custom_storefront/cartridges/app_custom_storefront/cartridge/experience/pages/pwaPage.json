@@ -1,0 +1,11 @@
+{
+    "name":"PWA Page",
+    "description":"PWA Page Type",
+    "region_definitions":[
+      {
+        "id":"main",
+        "name":"Main Region",
+        "component_type_exclusions": []
+      }
+    ]
+}

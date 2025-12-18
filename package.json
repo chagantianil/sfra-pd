@@ -32,7 +32,9 @@
     "uploadCartridge": "sgmf-scripts --uploadCartridge app_storefront_base && sgmf-scripts --uploadCartridge modules && sgmf-scripts --uploadCartridge bm_app_storefront_base",
     "watch": "sgmf-scripts --watch",
     "watch:static": "sgmf-scripts --watch static",
-    "release": "node bin/Makefile release --"
+    "release": "node bin/Makefile release --",
+    "build:harness": "cross-env HMR=false webpack-cli --config webpack.harness.config.js",
+    "watch:harness": "cross-env HMR=false webpack-cli --config webpack.harness.config.js --watch"
   },
   "repository": {
     "type": "git",
@@ -99,8 +101,11 @@
     "autoprefixer": "^10.4.14",
     "bootstrap": "^4.6.2",
     "cleave.js": "^1.5.3",
+    "cross-env": "^10.1.0",
     "flag-icons": "7.1.0",
     "font-awesome": "^4.7.0",
+    "webpack": "^5.39.1",
+    "webpack-cli": "^4.7.2",
     "jquery": "^3.5.1"
   },
   "browserslist": [

@@ -1,0 +1,17 @@
+<isdecorate template="common/layout/page">
+    <h1>User Information</h1>
+    <isif condition="${pdict.user}">
+        <p><strong>ID:</strong> ${pdict.user.id}</p>
+        <p><strong>First Name:</strong> ${pdict.user.first_name}</p>
+        <p><strong>Last Name:</strong> ${pdict.user.last_name}</p>
+        <p><strong>Email:</strong> ${pdict.user.email}</p>
+        <div>
+            <strong>Avatar:</strong><br/>
+            <img src="${pdict.user.avatar}" alt="${pdict.user.first_name}'s avatar" />
+        </div>
+    <iselse>
+        <p style="color: red;">
+            ${pdict.errorMessage || 'An unknown error occurred.'}
+        </p>
+    </isif>
+</isdecorate>

@@ -1,0 +1,14 @@
+<isscript>
+    var assets = require('*/cartridge/scripts/assets.js');
+    var URLUtils = require('dw/web/URLUtils');
+    assets.addCss('/css/experience/storePage.css');
+</isscript>
+<div class="storepage" id="${pdict.page.ID}">
+    <div class="container">
+        <div class="row">
+            <div id="pageid-ajax">
+                <isinclude url="${URLUtils.url('PWAProxy-GetContent', 'pageID', pdict.page.ID)}" />
+            </div>
+        </div>
+    </div>
+</div>

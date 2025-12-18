@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<form xmlns="http://www.demandware.com/xml/form/2008-01-01">
+    <field formid="firstName" label="form.label.firstname" type="string" mandatory="true" max-length="50"/>
+    
+    <field formid="lastName" label="form.label.lastname" type="string" mandatory="true" max-length="50"/>
+    
+    <field formid="email" label="form.label.email" type="string" mandatory="true"
+           regexp="^[\w.%+-]+@[\w.-]+\.[\w]{2,6}$" 
+           missing-error="form.error.required" 
+           parse-error="form.error.email.invalid" />
+           
+    <field formid="phone" label="form.label.phone" type="string" mandatory="false" max-length="20"/>
+    
+    <field formid="consent" label="form.label.consent" type="boolean" mandatory="true" 
+           missing-error="form.error.consent.required"/>
+       
+    <action formid="subscribe" valid-form="true"/>
+</form>
