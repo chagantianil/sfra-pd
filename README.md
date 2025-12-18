@@ -299,100 +299,79 @@ After importing, update the service credential with your PWA Kit URL:
 
 > ⚠️ **Prerequisites:** You need a PWA Kit project deployed to Managed Runtime. This cartridge fetches HTML from your PWA Kit app.
 
-#### 2.1 Create Page Route in PWA Kit
+#### Reference Implementation: `demo-multisite-app`
 
-Your PWA Kit app needs a route that handles Page Designer pages. Create a route for `/{siteID}/page/{pageID}`:
+A complete PWA Kit implementation exists in the sibling folder `demo-multisite-app/`. This implementation includes:
 
+| File | Description |
+|------|-------------|
+| `overrides/app/routes.jsx` | Route `/page/:pageId` for Page Designer pages |
+| `overrides/app/pages/page/[pageId]/index.jsx` | Page component using `usePage` hook |
+| `overrides/app/pages/experience/core/` | Core rendering components |
+| `overrides/app/pages/experience/pages/pwaPage/` | `pwaPage` type implementation |
+| `overrides/app/ssr.js` | CORS configuration for SFCC domains |
+
+#### 2.1 Key Components in PWA Kit
+
+**Route Handler (`pages/page/[pageId]/index.jsx`):**
 ```jsx
-// app/routes.jsx
-import PageDesignerPage from './pages/page-designer'
+const PageDetail = () => {
+    const {pageId} = useParams()
+    const {data, isLoading, error} = usePage({parameters: {pageId}})
+    
+    return <PageRenderer page={data} />
+}
+```
 
-const routes = [
-    // ... other routes
-    {
-        path: '/:siteId/page/:pageId',
-        component: PageDesignerPage
-    }
+**Preview Mode Hook (`core/usePreviewMode.js`):**
+```jsx
+export const usePreviewMode = () => {
+    const location = useLocation()
+    const searchParams = new URLSearchParams(location?.search || '')
+    return searchParams.get('preview') === 'true'
+}
+```
+
+**Page Designer Attributes (`core/ComponentRenderer.jsx`):**
+```jsx
+const previewAttributes = isPreview ? {
+    className: `experience-component experience-${typeId}`,
+    'data-sfcc-pd-component-info': JSON.stringify({
+        id: id,
+        render_state: 'SUCCESS',
+        type: typeId
+    }),
+    'data-allow-select': 'true',
+    'data-allow-move': 'true',
+    'data-allow-delete': 'true',
+    'data-item-id': `component|${id}`
+} : {}
+```
+
+#### 2.2 CORS Configuration in `ssr.js`
+
+The `demo-multisite-app` already includes CORS middleware for SFCC domains:
+
+```javascript
+const allowedOrigins = [
+    'https://zzap-249.dx.commercecloud.salesforce.com',
+    'https://*.commercecloud.salesforce.com',
+    'https://*.dx.commercecloud.salesforce.com'
 ]
 ```
 
-#### 2.2 Create Page Designer Page Component
+**Update these to match your SFCC sandbox domain.**
 
-Create a page component that fetches and renders Page Designer content:
-
-```jsx
-// app/pages/page-designer/index.jsx
-import React from 'react'
-import { useParams, useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-
-const PageDesignerPage = () => {
-    const { siteId, pageId } = useParams()
-    const location = useLocation()
-    const isPreview = new URLSearchParams(location.search).get('preview') === 'true'
-
-    // Fetch page content from SFCC
-    const { data: pageData } = useQuery({
-        queryKey: ['page', pageId],
-        queryFn: () => fetchPageContent(siteId, pageId)
-    })
-
-    return (
-        <div className={isPreview ? 'experience-page' : ''}>
-            {/* Render your components based on pageData */}
-            {pageData?.regions?.map(region => (
-                <Region key={region.id} region={region} isPreview={isPreview} />
-            ))}
-        </div>
-    )
-}
-```
-
-#### 2.3 Add Page Designer Classes (Preview Mode)
-
-When `?preview=true` is in the URL, add special classes and attributes so Page Designer can detect components:
-
-```jsx
-// Example: Component wrapper
-const ComponentWrapper = ({ component, isPreview, children }) => {
-    const previewProps = isPreview ? {
-        className: 'experience-component',
-        'data-component-id': component.id,
-        'data-component-type': component.typeId
-    } : {}
-
-    return (
-        <div {...previewProps}>
-            {children}
-        </div>
-    )
-}
-```
-
-**Required Attributes for Page Designer:**
-| Attribute | Purpose |
-|-----------|---------|
-| `class="experience-component"` | Marks element as a Page Designer component |
-| `data-component-id="{id}"` | Unique component identifier |
-| `data-component-type="{typeId}"` | Component type (optional but recommended) |
-
-#### 2.4 Allow SFCC to Reach Managed Runtime
-
-Ensure your Managed Runtime is accessible from SFCC:
-
-1. **Managed Runtime** is publicly accessible by default
-2. If using custom domains, ensure SSL certificates are valid
-3. For **local development**, use a tunnel service (ngrok) to expose localhost
-
-#### 2.5 Deploy to Managed Runtime
+#### 2.3 Deploy to Managed Runtime
 
 ```bash
+cd ../demo-multisite-app
 npm run push
 ```
 
 Verify deployment by visiting:
 ```
-https://your-project.mobify-storefront.com/{siteID}/page/test?preview=true
+https://your-project.mobify-storefront.com/page/{pageID}?preview=true
 ```
 
 ---
