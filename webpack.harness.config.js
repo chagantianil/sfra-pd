@@ -8,10 +8,10 @@ var path = require('path');
 var webpack = require('webpack');
 
 // Add your customizations here
-const clientConfig = config.find((cnf) => cnf.name === 'client')
+var clientConfig = config.find(function(cnf) { return cnf.name === 'client'; });
 
 // leverage the same CSS loader as PWA webpack does
-const css = {
+var css = {
     test: /\.css$/i,
     exclude: /node_modules/,
     use: [
@@ -23,7 +23,7 @@ const css = {
 clientConfig.module.rules.push(css)
 
 // start with pwa kits config and adapt
-const cartridgeConfig = Object.assign({}, clientConfig, {
+var cartridgeConfig = Object.assign({}, clientConfig, {
     name: 'harness',
     entry: {
         harness: './cartridges/app_q_pwa_support/cartridge/client/default/js/harness.js'
@@ -65,7 +65,7 @@ const cartridgeConfig = Object.assign({}, clientConfig, {
     }
 })
 
-const editorsConfig = {
+var editorsConfig = {
     mode: 'development',
     devtool: 'source-map',
     entry: {
