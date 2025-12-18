@@ -1,140 +1,240 @@
-# Storefront Reference Architecture (SFRA)
+# SFRA Page Designer + PWA Kit Integration
 
-This is a repository for the Storefront Reference Architecture reference application.
+This repository contains a custom SFRA implementation that integrates **Salesforce Page Designer** with **PWA Kit**, enabling visual content management for headless PWA storefronts.
 
-Storefront Reference Architecture has a base cartridge (`app_storefront_base`) provided by Commerce Cloud that is never directly customized or edited. Instead, customization cartridges are layered on top of the base cartridge. This change is intended to allow for easier adoption of new features and bug fixes.
-Storefront Reference Architecture supplies an [plugin_applepay](https://github.com/SalesforceCommerceCloud/plugin-applepay) plugin cartridge to demonstrate how to layer customizations for the reference application.
+## Overview
 
-Your feedback on the ease-of-use and limitations of this new architecture is invaluable during the developer preview. Particularly, feedback on any issues you encounter or workarounds you develop for efficiently customizing the base cartridge without editing it directly.
+This integration allows merchants to use SFCC's Page Designer to visually edit pages that are rendered by PWA Kit on the Managed Runtime. Components can be added, removed, and rearranged in Page Designer, with changes automatically reflected in the PWA Kit storefront.
 
-# The latest version
-
-The latest version of SFRA is 7.0.1
-
-# Getting Started
-
-1. Clone this repository.
-
-2. Run `npm install` to install all of the local dependencies (SFRA has been tested with Node v18.19 and is recommended)
-
-3. Run `npm run compile:js` from the command line that would compile all client-side JS files. Run `npm run compile:scss` and `npm run compile:fonts` that would do the same for css and fonts.
-
-4. Create `dw.json` file in the root of the project. Providing a [WebDAV access key from BM](https://documentation.b2c.commercecloud.salesforce.com/DOC1/index.jsp?topic=%2Fcom.demandware.dochelp%2Fcontent%2Fb2c_commerce%2Ftopics%2Fadmin%2Fb2c_access_keys_for_business_manager.html) in the `password` field is optional, as you will be prompted if it is not provided.
-
-```json
-{
-    "hostname": "your-sandbox-hostname.demandware.net",
-    "username": "AM username like me.myself@company.com",
-    "password": "your_webdav_access_key",
-    "code-version": "version_to_upload_to"
-}
-```
-
-5. Run `npm run uploadCartridge`. It will upload `app_storefront_base`, `modules` and `bm_app_storefront_base` cartridges to the sandbox you specified in `dw.json` file.
-
-6. Use https://github.com/SalesforceCommerceCloud/storefrontdata to zip and import site data on your sandbox.
-
-7. Add the `app_storefront_base` cartridge to your cartridge path in _Administration > Sites > Manage Sites > RefArch - Settings_ (Note: This should already be populated by the sample data in Step 6).
-
-8. You should now be ready to navigate to and use your site.
-
-# NPM scripts
-
-Use the provided NPM scripts to compile and upload changes to your Sandbox.
-
-## Compiling your application
-
--   `npm run compile:scss` - Compiles all .scss files into CSS.
--   `npm run compile:js` - Compiles all .js files and aggregates them.
--   `npm run compile:fonts` - Copies all needed font files. Usually, this only has to be run once.
-
-If you are having an issue compiling scss files, try running 'npm rebuild node-sass' from within your local repo.
-
-## Linting your code
-
-`npm run lint` - Execute linting for all JavaScript and SCSS files in the project. You should run this command before committing your code.
-
-## Watching for changes and uploading
-
-`npm run watch` - Watches everything and recompiles (if necessary) and uploads to the sandbox. Requires a valid `dw.json` file at the root that is configured for the sandbox to upload.
-
-## Uploading
-
-`npm run uploadCartridge` - Will upload `app_storefront_base`, `modules` and `bm_app_storefront_base` to the server. Requires a valid `dw.json` file at the root that is configured for the sandbox to upload.
-
-`npm run upload <filepath>` - Will upload a given file to the server. Requires a valid `dw.json` file.
-
-# Testing
-
-## Running unit tests
-
-You can run `npm test` to execute all unit tests in the project. Run `npm run cover` to get coverage information. Coverage will be available in `coverage` folder under root directory.
-
--   UNIT test code coverage:
-
-1. Open a terminal and navigate to the root directory of the mfsg repository.
-2. Enter the command: `npm run cover`.
-3. Examine the report that is generated. For example: `Writing coverage reports at [/Users/yourusername/SCC/sfra/coverage]`
-4. Navigate to this directory on your local machine, open up the index.html file. This file contains a detailed report.
-
-## Running integration tests
-
-Integration tests are located in the `storefront-reference-architecture/test/integration` directory.
-
-To run integration tests you can use the following command:
+## How It Works
 
 ```
-npm run test:integration
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Page Designer (SFCC)                              │
+│                                                                             │
+│  1. Merchant opens page in Page Designer                                    │
+│  2. SFCC sends service request to PWA Kit with ?preview=true                │
+│  3. PWA Kit returns HTML with Page Designer classes/attributes              │
+│  4. HTML is rendered in Page Designer for visual editing                    │
+│  5. On component update, latest HTML is fetched and synced                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PWA Kit (Managed Runtime)                            │
+│                                                                             │
+│  • Receives request with preview=true parameter                             │
+│  • Adds CSS classes and data attributes for Page Designer detection        │
+│  • Returns component HTML that Page Designer can parse                      │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Note:** Please note that short form of this command will try to locate URL of your sandbox by reading `dw.json` file in the root directory of your project. If you don't have `dw.json` file, integration tests will fail.
-sample `dw.json` file (this file needs to be in the root of your project)
+### Key Concepts
 
-```json
-{
-    "hostname": "devxx-sitegenesis-dw.demandware.net"
-}
+1. **SFCC Domain Allowlisting**: SFCC domain URLs are added to `ssr.js` in PWA Kit to allow SFCC to fetch page HTML from the Managed Runtime.
+
+2. **Service Request**: A server-side request is made from SFCC to the PWA Kit page URL to retrieve the page HTML, bypassing CORS restrictions.
+
+3. **Preview Mode**: When sending the service request, a `preview=true` parameter is passed to PWA Kit.
+
+4. **Component Detection**: In PWA Kit, when `preview=true` is detected, required CSS classes and data attributes are added to components (similar to how SFRA handles Page Designer components).
+
+5. **Visual Editing**: Since the HTML loaded in Page Designer contains the proper classes and attributes, components can be added, removed, and rearranged visually.
+
+6. **Auto-Sync**: When a component is updated in Page Designer, the latest HTML is automatically fetched from the Managed Runtime and synced back to SFCC.
+
+---
+
+## Setup Guide
+
+### Prerequisites
+
+- SFCC sandbox with Page Designer access
+- PWA Kit project deployed to Managed Runtime
+- Business Manager access for custom preferences
+
+---
+
+### Step 1: Configure PWA Kit
+
+#### 1.1 Update `ssr.js` to Allow SFCC Domains
+
+In your PWA Kit project, update `ssr.js` to add your SFCC domain to the allowed origins:
+
+```javascript
+// app/ssr.js
+const allowedOrigins = [
+    'https://your-sfcc-sandbox.demandware.net',
+    'https://your-production-domain.com'
+];
 ```
 
-You can also supply URL of the sandbox on the command line:
+#### 1.2 Handle Preview Mode in Components
+
+In your PWA Kit components, check for the `preview` query parameter and add Page Designer classes/attributes:
+
+```javascript
+// Example: In your page component
+import { useLocation } from 'react-router-dom';
+
+const MyComponent = ({ componentId, ...props }) => {
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const isPreview = searchParams.get('preview') === 'true';
+
+    // Add Page Designer attributes when in preview mode
+    const pdAttributes = isPreview ? {
+        'data-component-id': componentId,
+        className: 'experience-component'
+    } : {};
+
+    return (
+        <div {...pdAttributes}>
+            {/* Component content */}
+        </div>
+    );
+};
+```
+
+#### 1.3 Deploy to Managed Runtime
+
+Deploy your PWA Kit changes to the Managed Runtime:
+
+```bash
+npm run push
+```
+
+---
+
+### Step 2: Configure SFCC
+
+#### 2.1 Create Custom Site Preference
+
+1. Go to **Business Manager** → **Administration** → **Site Development** → **System Object Types**
+2. Find or create a custom preference group for PWA Kit settings
+3. Add a custom attribute:
+   - **ID**: `pwaKitURL`
+   - **Display Name**: PWA Kit URL
+   - **Type**: String
+   - **Description**: Base URL of the PWA Kit Managed Runtime (e.g., `https://your-project.mobify-storefront.com`)
+
+#### 2.2 Set the PWA Kit URL
+
+1. Go to **Business Manager** → **Merchant Tools** → **Site Preferences** → **Custom Preferences**
+2. Set the **PWA Kit URL** to your Managed Runtime URL (e.g., `https://your-project.mobify-storefront.com`)
+
+#### 2.3 Upload the Custom Cartridge
+
+1. Upload the `app_custom_storefront` cartridge to your sandbox
+2. Add it to your cartridge path:
+   ```
+   app_custom_storefront:app_storefront_base:...
+   ```
+
+#### 2.4 Import System Object Extensions (Optional)
+
+If you need the custom site preference, import the metadata:
 
 ```
-npm run test:integration -- --baseUrl devxx-sitegenesis-dw.demandware.net
+app_custom_storefront/meta/system-objecttype-extensions.xml
 ```
 
-## Running acceptance tests
+---
 
-**Prerequisite:** The Java Runtime Environment (JRE 8+) is required to run Selenium and the acceptance tests. If you have not done so, install Java on your machine.
+### Step 3: Create a PWA Page Type in Page Designer
 
-Acceptance tests are located in the `storefront-reference-architecture/test/acceptance` directory.
+#### 3.1 Register the Page Type
 
-The acceptance tests will run against the site specified in the hostname property of `dw.json`. ie. To run the tests on `abcd-123.dx.commercecloud.salesforce.com`, in your dw.json set the following:
+The custom cartridge includes a `pwaPage` page type:
+
+- **Location**: `app_custom_storefront/cartridges/app_custom_storefront/cartridge/experience/pages/`
+- **Files**:
+  - `pwaPage.js` - Page controller
+  - `pwaPage.json` - Page type definition
+
+#### 3.2 Create a Page in Page Designer
+
+1. Go to **Business Manager** → **Merchant Tools** → **Content** → **Page Designer**
+2. Create a new page using the **PWA Page** type
+3. Add and arrange components as needed
+4. Publish the page
+
+---
+
+## Architecture
+
+### SFCC Components
+
+| File | Description |
+|------|-------------|
+| `controllers/PWAProxy.js` | Server-side proxy that fetches HTML from PWA Kit |
+| `experience/pages/pwaPage.js` | Page Designer page type controller |
+| `experience/pages/pwaPage.json` | Page type definition |
+| `templates/default/experience/pages/pwaPage.isml` | Page template with remote include |
+
+### Request Flow
+
+1. **Page Designer opens page** → Triggers `pwaPage.js`
+2. **pwaPage.isml** → Includes `PWAProxy-GetContent` controller
+3. **PWAProxy.js** → Makes HTTP request to PWA Kit with `?preview=true`
+4. **PWA Kit** → Returns HTML with Page Designer attributes
+5. **Page Designer** → Renders HTML and enables visual editing
+
+---
+
+## Troubleshooting
+
+### CORS Errors
+
+If you encounter CORS errors:
+- Ensure your SFCC domain is added to the allowed origins in PWA Kit's `ssr.js`
+- The `PWAProxy` controller makes server-side requests to bypass browser CORS restrictions
+
+### Components Not Detected
+
+If Page Designer doesn't detect components:
+- Verify the `preview=true` parameter is being passed
+- Check that PWA Kit components have the required CSS classes and data attributes
+- Inspect the HTML returned from PWA Kit for proper Page Designer markup
+
+### Connection Timeouts
+
+If requests to PWA Kit timeout:
+- Check the Managed Runtime is accessible
+- Verify the `pwaKitURL` site preference is correct
+- Check network/firewall settings between SFCC and Managed Runtime
+
+### Empty Page Content
+
+If the page appears empty:
+- Verify the PWA Kit URL is correctly configured in Site Preferences
+- Check the PWAProxy controller logs for errors
+- Test the PWA Kit URL directly in a browser with `?preview=true`
+
+---
+
+## Development
+
+### Local Testing
+
+For local development, you can point the `pwaKitURL` to your local PWA Kit instance:
 
 ```
-"hostname": "abcd-123.dx.commercecloud.salesforce.com"
+http://localhost:3000
 ```
 
-There are several NPM scripts available for running the acceptance tests. They all require a `--profile` parameter for setting the browser the tests will run against. ie. `npm run test:acceptance:smoke --profile chrome`
+Note: This requires proper CORS configuration on your local PWA Kit server.
 
-Tests will generally run on Chrome, Safari, and Firefox.
+### Building Client-Side Assets
 
-To run the tests in headless mode, set a HEADLESS environment to true before starting the npm run. ie. `HEADLESS=true && npm run test:acceptance:smoke --profile chrome`
+```bash
+cd app_custom_storefront
+npm install
+npm run build
+```
 
--   `test:acceptance:custom` - runs all tests (Note: some tests will fail as the browser size defaults to desktop)
--   `test:acceptance:deep` - runs all storefront tests
--   `test:acceptance:smoke` - runs happy path tests
--   `test:acceptance:pagedesigner` - runs page designer tests
--   `test:acceptance:desktop` - runs storefront desktop tests
--   `test:acceptance:mobile` - runs storefront mobile tests
--   `test:acceptance:tablet` - runs storefront tablet tests
+---
 
-### Notes
+## License
 
--   Selenium can be finicky to start. If the tests fail to start, simply rerun the command again until the tests start.
--   If you see version compatibility issues between browser and the driver, try configuring specific version of the driver in the [codecept config file](./codecept.conf.js). See the resolved [github issue](https://github.com/codeceptjs/CodeceptJS/issues/2885) for details.
-
-# [Contributing to SFRA](./CONTRIBUTING.md)
-
-# Page Designer Components for Storefront Reference Architecture
-
-See: [Page Designer Components](./page-designer-components.md)
+This project is based on the Salesforce Commerce Cloud Storefront Reference Architecture (SFRA).
