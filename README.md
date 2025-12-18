@@ -176,48 +176,7 @@ function getPWAKitService() {
 
 ---
 
-### 5. Metadata - Site Preference Definition
-**`meta/system-objecttype-extensions.xml`**
-
-This file defines the custom site preference used to store the PWA Kit URL. **You must import this file** to create the `pwaKitURL` site preference.
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
-    <type-extension type-id="SitePreferences">
-        <custom-attribute-definitions>
-            <attribute-definition attribute-id="pwaKitURL">
-                <display-name xml:lang="x-default">PWA Kit URL</display-name>
-                <description xml:lang="x-default">Base URL for the PWA Kit application 
-                    (e.g., https://your-pwa-app.com). Must be publicly accessible.</description>
-                <type>string</type>
-                <mandatory-flag>false</mandatory-flag>
-                <externally-managed-flag>false</externally-managed-flag>
-                <min-length>0</min-length>
-            </attribute-definition>
-        </custom-attribute-definitions>
-        <group-definitions>
-            <attribute-group group-id="PWAKit">
-                <display-name xml:lang="x-default">PWA Kit</display-name>
-                <attribute attribute-id="pwaKitURL"/>
-            </attribute-group>
-        </group-definitions>
-    </type-extension>
-</metadata>
-```
-
-**What this creates:**
-| Element | Description |
-|---------|-------------|
-| `pwaKitURL` | Custom site preference attribute (String type) |
-| `PWAKit` | Attribute group - organizes the preference under "PWA Kit" tab in Business Manager |
-
-**After import, you'll find it at:**
-- **Merchant Tools** → **Site Preferences** → **Custom Preferences** → **PWA Kit** tab
-
----
-
-### 7. Service Metadata
+### 6. Service Metadata
 **`meta/services.xml`**
 
 This file defines the HTTP service used to call PWA Kit. **You must import this file** to create the service.
@@ -272,17 +231,7 @@ Upload `app_custom_storefront` cartridge and add to cartridge path:
 app_custom_storefront:app_storefront_base:...
 ```
 
-#### 1.2 Import Site Preference Metadata
-
-Import the system object extension to create the `pwaKitURL` site preference:
-
-1. Go to **Business Manager** → **Administration** → **Site Development** → **Import & Export**
-2. Click **Upload** under "Import & Export Files"
-3. Upload: `app_custom_storefront/meta/system-objecttype-extensions.xml`
-4. Click **Import** under "Meta Data"
-5. Select the uploaded file and click **Next** → **Import**
-
-#### 1.3 Import Service Metadata (Required)
+#### 1.2 Import Service Metadata
 
 Import the service definition for the PWA Kit HTTP service:
 
@@ -295,12 +244,11 @@ Import the service definition for the PWA Kit HTTP service:
 **What gets created:**
 | Item | Location |
 |------|----------|
-| `pwaKitURL` site preference | Merchant Tools → Site Preferences → Custom Preferences |
 | `pwakit.http.service` | Administration → Operations → Services |
 | `pwakit.http.credential` | Administration → Operations → Services → Credentials |
 | `pwakit.http.profile` | Administration → Operations → Services → Profiles |
 
-#### 1.4 Configure Service Credential
+#### 1.3 Configure Service Credential (Set PWA Kit URL)
 
 After importing, update the service credential with your PWA Kit URL:
 
@@ -310,15 +258,8 @@ After importing, update the service credential with your PWA Kit URL:
    ```
    https://your-project.mobify-storefront.com
    ```
-4. Click **Apply**
-
-#### 1.5 Set the PWA Kit URL Site Preference
-1. Go to **Merchant Tools** → **Site Preferences** → **Custom Preferences**
-2. Set **PWA Kit URL** to your Managed Runtime URL:
-   ```
-   https://your-project.mobify-storefront.com
-   ```
    (No trailing slash)
+4. Click **Apply**
 
 ---
 
@@ -393,9 +334,11 @@ npm run push
 ## 🔧 Troubleshooting
 
 ### "PWA Kit URL not configured" Error
-**Solution:** Set the `pwaKitURL` site preference in Business Manager:
-- **Merchant Tools** → **Site Preferences** → **Custom Preferences**
-- Enter your Managed Runtime URL (e.g., `https://your-project.mobify-storefront.com`)
+**Solution:** Set the URL in the service credential:
+1. Go to **Administration** → **Operations** → **Services** → **Credentials**
+2. Click on **pwakit.http.credential**
+3. Enter your Managed Runtime URL (e.g., `https://your-project.mobify-storefront.com`)
+4. Click **Apply**
 
 ### Empty Page / No Content
 **Possible Causes:**
@@ -424,9 +367,9 @@ https://your-project.mobify-storefront.com/{siteID}/page/{pageID}?preview=true
 
 ## 📋 Quick Reference
 
-| Site Preference | Value | Example |
-|----------------|-------|---------|
-| `pwaKitURL` | PWA Kit Managed Runtime URL | `https://your-project.mobify-storefront.com` |
+| Service Credential | Value | Example |
+|-------------------|-------|---------|
+| `pwakit.http.credential` URL | PWA Kit Managed Runtime URL | `https://your-project.mobify-storefront.com` |
 
 | Request URL Format | Description |
 |-------------------|-------------|
@@ -439,7 +382,6 @@ https://your-project.mobify-storefront.com/{siteID}/page/{pageID}?preview=true
 | `pwaPage.isml` | Template, includes PWAProxy controller |
 | `PWAProxy.js` | Controller that fetches content via service |
 | `scripts/services/pwaKitService.js` | SFCC Service Framework implementation |
-| `meta/system-objecttype-extensions.xml` | Creates `pwaKitURL` site preference |
 | `meta/services.xml` | Creates HTTP service, profile, and credential |
 
 ---

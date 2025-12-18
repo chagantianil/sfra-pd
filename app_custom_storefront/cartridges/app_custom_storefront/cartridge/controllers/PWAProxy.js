@@ -30,18 +30,8 @@ server.get('GetContent', server.middleware.include, function (req, res, next) {
         return next();
     }
 
-    // Get PWA Kit URL from Site Preferences (for validation)
-    var pwaKitBaseURL = Site.getCurrent().getCustomPreferenceValue('pwaKitURL');
-
-    if (!pwaKitBaseURL || pwaKitBaseURL === null || pwaKitBaseURL === '') {
-        res.setStatusCode(500);
-        res.json({
-            error: 'PWA Kit URL not configured. Please set the "PWA Kit URL" preference in Business Manager > Site Preferences > Custom Preferences > PWA Kit.'
-        });
-        return next();
-    }
-
-    // Use the service framework to fetch content
+    // Use the SFCC Service Framework to fetch content
+    // PWA Kit URL is configured in service credential, not site preference
     var result = pwaKitService.getPageContent(siteID, pageID);
 
     if (result.success) {

@@ -2,10 +2,13 @@
 
 /**
  * PWA Kit Service - HTTP Service for fetching content from PWA Kit Managed Runtime
+ * 
+ * The PWA Kit URL is configured in the service credential (pwakit.http.credential),
+ * NOT in site preferences. Configure via:
+ * Business Manager → Administration → Operations → Services → Credentials
  */
 
 var LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
-var Site = require('dw/system/Site');
 
 /**
  * Creates and returns the PWA Kit HTTP Service
@@ -22,14 +25,15 @@ function getPWAKitService() {
          * @returns {string} The request URL
          */
         createRequest: function (svc, params) {
-            var pwaKitBaseURL = Site.getCurrent().getCustomPreferenceValue('pwaKitURL');
+            // Get base URL from service credential (configured in Business Manager)
+            var credentialURL = svc.getURL();
             
-            if (!pwaKitBaseURL || pwaKitBaseURL === null || pwaKitBaseURL === '') {
-                throw new Error('PWA Kit URL not configured in Site Preferences');
+            if (!credentialURL || credentialURL === '') {
+                throw new Error('PWA Kit URL not configured. Set URL in Service Credential: Administration → Operations → Services → Credentials → pwakit.http.credential');
             }
 
             // Remove trailing slash if present
-            var baseURL = pwaKitBaseURL.toString().replace(/\/$/, '');
+            var baseURL = credentialURL.replace(/\/$/, '');
             
             // Construct the full URL: {baseURL}/{siteID}/page/{pageID}?preview=true
             var url = baseURL + '/' + params.siteID + '/page/' + params.pageID + '?preview=true';
@@ -125,4 +129,3 @@ module.exports = {
     getPWAKitService: getPWAKitService,
     getPageContent: getPageContent
 };
-
