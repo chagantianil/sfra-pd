@@ -2,12 +2,14 @@
 <services xmlns="http://www.demandware.com/xml/impex/services/2014-09-26">
 
     <!-- PWA Kit HTTP Service Credential -->
-    <service-credential id="pwakit.http.credential">
+    <service-credential service-credential-id="pwakit.http.credential">
         <url>https://your-pwa-kit-url.mobify-storefront.com</url>
+        <user-id/>
+        <password masked="true">********</password>
     </service-credential>
 
     <!-- PWA Kit HTTP Service Profile -->
-    <service-profile id="pwakit.http.profile">
+    <service-profile service-profile-id="pwakit.http.profile">
         <timeout-millis>10000</timeout-millis>
         <rate-limit-enabled>false</rate-limit-enabled>
         <rate-limit-calls>0</rate-limit-calls>
@@ -18,12 +20,12 @@
     </service-profile>
 
     <!-- PWA Kit HTTP Service Definition -->
-    <service id="pwakit.http.service">
-        <type>HTTP</type>
+    <service service-id="pwakit.http.service">
+        <service-type>HTTP</service-type>
         <enabled>true</enabled>
         <log-prefix>PWAKit</log-prefix>
         <comm-log-enabled>true</comm-log-enabled>
-        <force-prd-behaviour-in-dev>false</force-prd-behaviour-in-dev>
+        <force-prd-enabled>false</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>pwakit.http.profile</profile-id>
         <credential-id>pwakit.http.credential</credential-id>
